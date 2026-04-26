@@ -1,6 +1,6 @@
 // 配置
 const CONFIG = {
-    refreshInterval: 5000, // 5秒
+    refreshInterval: 2000, // 2秒
     apiEndpoints: {
         providers: '/providers',
         capacity: '/capacity',
