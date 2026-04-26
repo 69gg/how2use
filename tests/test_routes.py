@@ -32,9 +32,9 @@ def _build_app(providers, api_key: str = "") -> FastAPI:
     import os
 
     if api_key:
-        os.environ["UPSTREAM_SERVER__API_KEY"] = api_key
+        os.environ["HOW2USE_SERVER__API_KEY"] = api_key
     else:
-        os.environ.pop("UPSTREAM_SERVER__API_KEY", None)
+        os.environ.pop("HOW2USE_SERVER__API_KEY", None)
     cfg_mod.reset_config_cache()
 
     app = FastAPI()

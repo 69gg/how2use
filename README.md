@@ -1,4 +1,4 @@
-# upstream-capacity
+# how2use
 
 上游 LLM provider 容量 / 额度 / RPM 统一查询服务。
 
@@ -36,10 +36,10 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8765
 所有字段都可被环境变量覆盖（嵌套用 `__`）：
 
 ```bash
-UPSTREAM_CLIENTS__GROK2API__APP_KEY=xxx
-UPSTREAM_CLIENTS__NEW_API__ACCESS_TOKEN=xxx
-UPSTREAM_CLIENTS__NEW_API__USER_ID=1
-UPSTREAM_SERVER__API_KEY=xxx          # 可选：服务自身 X-API-Key 鉴权
+HOW2USE_CLIENTS__GROK2API__APP_KEY=xxx
+HOW2USE_CLIENTS__NEW_API__ACCESS_TOKEN=xxx
+HOW2USE_CLIENTS__NEW_API__USER_ID=1
+HOW2USE_SERVER__API_KEY=xxx          # 可选：服务自身 X-API-Key 鉴权
 ```
 
 ## 多 NIM 池配置
@@ -124,13 +124,13 @@ uv run pytest -q
 ## Docker
 
 ```bash
-docker build -t upstream-capacity .
+docker build -t how2use .
 docker run -p 8765:8765 \
-  -e UPSTREAM_CLIENTS__GROK2API__APP_KEY=xxx \
-  -e UPSTREAM_CLIENTS__NEW_API__ACCESS_TOKEN=xxx \
-  -e UPSTREAM_CLIENTS__NEW_API__USER_ID=1 \
+  -e HOW2USE_CLIENTS__GROK2API__APP_KEY=xxx \
+  -e HOW2USE_CLIENTS__NEW_API__ACCESS_TOKEN=xxx \
+  -e HOW2USE_CLIENTS__NEW_API__USER_ID=1 \
   -v $(pwd)/config.toml:/app/config.toml \
-  upstream-capacity
+  how2use
 ```
 
 ## 已知限制

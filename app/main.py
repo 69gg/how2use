@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router as api_router
 from app.cache import CapacityCache
@@ -18,7 +21,7 @@ from app.providers import build_providers
 async def lifespan(app: FastAPI):
     cfg = get_config()
     setup_logger(cfg.logging.level)
-    logger.info("upstream-capacity starting on {}:{}", cfg.server.host, cfg.server.port)
+    logger.info("how2use starting on {}:{}", cfg.server.host, cfg.server.port)
 
     # 客户端实例化（按需）
     clients: dict[str, object] = {}
@@ -67,12 +70,23 @@ async def lifespan(app: FastAPI):
             await grok_client.aclose()
         if new_api_client is not None:
             await new_api_client.aclose()
-        logger.info("upstream-capacity stopped")
+        logger.info("how2use stopped")
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="upstream-capacity", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="how2use", version="0.1.0", lifespan=lifespan)
     app.include_router(api_router)
+
+    # 挂载静态文件
+    static_dir = Path(__file__).parent.parent / "static"
+    if static_dir.exists():
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+    # 根路由重定向到静态文件
+    @app.get("/", include_in_schema=False)
+    async def root():
+        return RedirectResponse(url="/static/index.html")
+
     return app
 
 

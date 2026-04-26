@@ -2,8 +2,8 @@
 
 约定：
 - 默认从仓库根目录的 ``config.toml`` 读取
-- 环境变量前缀 ``UPSTREAM_``，嵌套字段用 ``__`` 分隔
-  例：UPSTREAM_CLIENTS__NEW_API__ACCESS_TOKEN=xxx
+- 环境变量前缀 ``HOW2USE_``，嵌套字段用 ``__`` 分隔
+  例：HOW2USE_CLIENTS__NEW_API__ACCESS_TOKEN=xxx
 """
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ class ProvidersConfig(BaseModel):
 
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="UPSTREAM_",
+        env_prefix="HOW2USE_",
         env_nested_delimiter="__",
         case_sensitive=False,
         extra="ignore",
@@ -135,7 +135,7 @@ def get_config(config_path: str | None = None) -> AppConfig:
 
     优先级：环境变量 > TOML 文件 > 默认值
     """
-    path_str = config_path or os.environ.get("UPSTREAM_CONFIG_FILE", "config.toml")
+    path_str = config_path or os.environ.get("HOW2USE_CONFIG_FILE", "config.toml")
     path = Path(path_str).resolve()
     file_data = _load_toml(path)
     return AppConfig(**file_data)

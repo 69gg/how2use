@@ -1,7 +1,7 @@
 # ============================================================
-# upstream-capacity 默认配置
-# 所有字段均可被环境变量 UPSTREAM_<SECTION>__<KEY> 覆盖
-# 例如：UPSTREAM_CLIENTS__NEW_API__ACCESS_TOKEN=xxx
+# how2use 默认配置
+# 所有字段均可被环境变量 HOW2USE_<SECTION>__<KEY> 覆盖
+# 例如：HOW2USE_CLIENTS__NEW_API__ACCESS_TOKEN=xxx
 # ============================================================
 
 [server]

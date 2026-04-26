@@ -1,5 +1,5 @@
 [project]
-name = "upstream-capacity"
+name = "how2use"
 version = "0.1.0"
 description = "Unified upstream provider capacity / quota / RPM aggregator"
 requires-python = ">=3.11"

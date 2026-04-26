@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How2Use - 上游容量监控</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>How2Use</h1>
+            <span class="subtitle">上游容量监控</span>
+        </div>
+        <div class="header-right">
+            <div class="api-key-group">
+                <label for="api-key">API 密钥</label>
+                <input type="password" id="api-key" placeholder="可选">
+            </div>
+            <div class="refresh-controls">
+                <label class="toggle">
+                    <input type="checkbox" id="auto-refresh" checked>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">自动刷新</span>
+                </label>
+                <button id="refresh-btn" class="btn btn-primary">刷新</button>
+                <span class="last-updated" id="last-updated"></span>
+            </div>
+        </div>
+    </header>
+    <main>
+        <div id="providers-container" class="providers-grid">
+            <!-- Provider cards will be inserted here -->
+        </div>
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <span>加载中...</span>
+        </div>
+        <div id="error" class="error" style="display: none;">
+            <span class="error-message"></span>
+            <button class="btn btn-secondary retry-btn">重试</button>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

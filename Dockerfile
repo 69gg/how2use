@@ -9,6 +9,7 @@ ENV PIP_NO_CACHE_DIR=1 \
 
 COPY pyproject.toml ./
 COPY app ./app
+COPY static ./static
 
 RUN pip install --upgrade pip && pip install -e .
 
