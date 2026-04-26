@@ -2,7 +2,8 @@
 
 - 账号活性：从 new-api ``GET /api/channel/:id`` 的 ``status`` +
   ``channel_info.multi_key_status_list`` 计算（后台周期拉取，缓存到内存）
-- 已用 RPM：``GET /api/log/stat?channel=&type=2``（实时调用，rpm 固定 60s 滑窗）
+- 已用 RPM：``GET /api/log/stat?channel=&type=2``（rpm 固定 60s 滑窗）
+- 实时 RPM：轮询 ``used_quota`` 差值，结合 60s 滑窗 RPM 反推实时请求数
 - 不直接调 NVIDIA NIM 上游
 
 new-api channel.status 取值：
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import deque
 from dataclasses import dataclass, field
 
 from app.clients.new_api_client import NewApiClient
@@ -24,6 +26,9 @@ from app.providers.base import AccountSlot, ProviderCapacity, ProviderError
 
 CHANNEL_STATUS_ENABLED = 1
 KEY_STATUS_ENABLED = 0
+
+# 滚动窗口长度（秒）
+_QUOTA_WINDOW_SECONDS = 60
 
 
 def _now_ms() -> int:
@@ -37,6 +42,7 @@ class _ChannelState:
     is_multi_key: bool = False
     multi_key_size: int = 0
     multi_key_status_list: dict[int, int] = field(default_factory=dict)
+    used_quota: int = 0
     error: str | None = None
     fetched_at: int = 0
 
@@ -58,6 +64,8 @@ class NimProvider:
         self.client = client
         self._channel_state: dict[int, _ChannelState] = {}
         self._probe_tasks: list[asyncio.Task] = []
+        # used_quota 滚动窗口：channel_id -> deque[(timestamp, quota)]
+        self._quota_window: dict[int, deque[tuple[float, int]]] = {}
 
     async def start(self) -> None:
         await self._probe_all_once()
@@ -82,7 +90,7 @@ class NimProvider:
         await asyncio.gather(*(self._probe_channel(cid) for cid in all_ids))
 
     async def _probe_loop(self, pool: NimPoolConfig) -> None:
-        interval = max(5, pool.probe_interval_seconds)
+        interval = max(2, pool.probe_interval_seconds)
         while True:
             try:
                 await asyncio.sleep(interval)
@@ -119,12 +127,24 @@ class NimProvider:
                 except (TypeError, ValueError):
                     continue
 
+        used_quota = int(data.get("used_quota") or 0)
+        now = time.time()
+
+        # 更新滚动窗口
+        win = self._quota_window.setdefault(channel_id, deque())
+        win.append((now, used_quota))
+        # 清理超过窗口期的旧样本
+        cutoff = now - _QUOTA_WINDOW_SECONDS
+        while win and win[0][0] < cutoff:
+            win.popleft()
+
         self._channel_state[channel_id] = _ChannelState(
             channel_id=channel_id,
             status=int(data.get("status") or 0),
             is_multi_key=bool(ci.get("is_multi_key")),
             multi_key_size=int(ci.get("multi_key_size") or 0),
             multi_key_status_list=normalized,
+            used_quota=used_quota,
             error=None,
             fetched_at=_now_ms(),
         )
@@ -141,13 +161,16 @@ class NimProvider:
         rpm_used: int | None
         rpm_error: str | None = None
         try:
-            rpm_used, _ = await self.client.get_log_stat_multi(pool.new_api_channel_ids)
+            stat_rpm, _ = await self.client.get_log_stat_multi(pool.new_api_channel_ids)
         except ProviderError as e:
-            rpm_used = None
+            stat_rpm = None
             rpm_error = str(e)
             logger.warning(
                 "NimProvider get_log_stat_multi failed (pool={}): {}", pool.name, e
             )
+
+        # 用 used_quota 差值估算实时 RPM
+        rpm_used = self._fuse_rpm(pool, stat_rpm)
 
         accounts_active = self._calc_active(pool, states)
         accounts_total = pool.pool_size
@@ -189,6 +212,68 @@ class NimProvider:
             healthy=healthy,
             error=error_msg,
         )
+
+    def _fuse_rpm(
+        self,
+        pool: NimPoolConfig,
+        stat_rpm: int | None,
+    ) -> int | None:
+        """融合 used_quota 滚动窗口与 60s 滑窗 RPM。
+
+        算法：
+        1. 从滚动窗口取 60s 内的 quota 增量 → delta_quota_60s
+        2. 从滚动窗口取最近一个采样间隔的 quota 增量 → delta_quota_recent
+        3. realtime_rpm = stat_rpm * (delta_quota_recent / dt) / (delta_quota_60s / 60)
+           即：当前速率 / 60s 平均速率 * stat_rpm
+        """
+        if stat_rpm is None:
+            return None
+
+        now = time.time()
+        total_delta_recent = 0.0
+        total_dt_recent = 0.0
+        total_delta_60s = 0.0
+
+        for cid in pool.new_api_channel_ids:
+            win = self._quota_window.get(cid)
+            if not win or len(win) < 2:
+                continue
+
+            # 60s 窗口增量
+            oldest_ts, oldest_q = win[0]
+            newest_ts, newest_q = win[-1]
+            window_span = newest_ts - oldest_ts
+            if window_span > 0:
+                total_delta_60s += newest_q - oldest_q
+
+            # 最近两个采样的增量
+            prev_ts, prev_q = win[-2]
+            cur_ts, cur_q = win[-1]
+            dt = cur_ts - prev_ts
+            if dt > 0.5:
+                dq = cur_q - prev_q
+                if dq >= 0:
+                    total_delta_recent += dq
+                    total_dt_recent += dt
+
+        # 没有足够数据，用 stat_rpm
+        if total_dt_recent <= 0 or total_delta_60s <= 0 or window_span <= 0:
+            return stat_rpm
+
+        # 当前配额速率
+        recent_rate = total_delta_recent / total_dt_recent
+        # 60s 平均配额速率
+        avg_rate = total_delta_60s / window_span
+
+        if avg_rate <= 0:
+            return stat_rpm
+
+        # 按速率比例调整 stat_rpm
+        ratio = recent_rate / avg_rate
+        realtime_rpm = int(stat_rpm * ratio)
+
+        # 取 max 保守估计，避免低估
+        return max(stat_rpm, realtime_rpm)
 
     @staticmethod
     def _calc_active(

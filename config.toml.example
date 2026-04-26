@@ -46,4 +46,4 @@ name = "default"
 pool_size = 10
 rpm_per_key = 40
 new_api_channel_ids = [42]
-probe_interval_seconds = 30
+probe_interval_seconds = 2

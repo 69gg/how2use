@@ -53,14 +53,14 @@ name = "default"
 pool_size = 10                  # 该池 key 数量
 rpm_per_key = 40                # 单 key RPM 限速
 new_api_channel_ids = [42]      # 关联到 new-api 的 channel id
-probe_interval_seconds = 30     # 探测 channel 状态的周期
+probe_interval_seconds = 2      # 轮询 used_quota 的周期（秒），用于实时 RPM 融合
 
 [[providers.nim.pools]]
 name = "premium"
 pool_size = 5
 rpm_per_key = 40
 new_api_channel_ids = [55, 56]  # 多 channel 聚合
-probe_interval_seconds = 30
+probe_interval_seconds = 2
 ```
 
 ## API
