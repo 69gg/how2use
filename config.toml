@@ -1,0 +1,49 @@
+# ============================================================
+# upstream-capacity 默认配置
+# 所有字段均可被环境变量 UPSTREAM_<SECTION>__<KEY> 覆盖
+# 例如：UPSTREAM_CLIENTS__NEW_API__ACCESS_TOKEN=xxx
+# ============================================================
+
+[server]
+host = "0.0.0.0"
+port = 8765
+api_key = ""                  # 空表示不鉴权
+cache_ttl_seconds = 5
+
+[logging]
+level = "INFO"
+
+# ============ 客户端（被多个 provider 复用） ============
+[clients.new_api]
+base_url = "http://127.0.0.1:3000"
+access_token = ""             # 必填：new-api 后台生成的 Access Token
+user_id = 1                   # 必填：与 access_token 对应的 user id
+timeout = 5.0
+max_connections = 20
+
+[clients.grok2api]
+base_url = "http://127.0.0.1:8000"
+app_key = "grok2api"          # 等同 grok2api 的 SERVER_APP_KEY
+timeout = 10.0
+max_connections = 10
+
+# ============ Provider: grok2api ============
+[providers.grok2api]
+enabled = true
+client = "grok2api"
+cooling_counts_as_used_concurrency = true
+include_accounts = true
+mask_tail_len = 8
+
+# ============ Provider: nim ============
+[providers.nim]
+enabled = true
+client = "new_api"
+
+# 多池支持，每池关联一组 new-api channel_id
+[[providers.nim.pools]]
+name = "default"
+pool_size = 10
+rpm_per_key = 40
+new_api_channel_ids = [42]
+probe_interval_seconds = 30
