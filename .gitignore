@@ -11,6 +11,8 @@ dist/
 .env
 .env.*
 !.env.example
+config.toml
+!config.toml.example
 .DS_Store
 .idea/
 .vscode/

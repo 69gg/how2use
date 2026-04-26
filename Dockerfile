@@ -13,7 +13,7 @@ COPY static ./static
 
 RUN pip install --upgrade pip && pip install -e .
 
-COPY config.toml ./config.toml
+COPY config.toml.example ./config.toml.example
 
 EXPOSE 8765
 

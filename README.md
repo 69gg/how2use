@@ -17,7 +17,8 @@
 # 1. 装依赖
 uv sync                         # 或 pip install -e .
 
-# 2. 编辑配置（最少改三处见下）
+# 2. 复制示例配置并编辑（最少改三处见下）
+cp config.toml.example config.toml
 vim config.toml
 
 # 3. 启动
@@ -125,10 +126,13 @@ uv run pytest -q
 
 ```bash
 docker build -t how2use .
+
+# 复制示例配置并编辑
+cp config.toml.example config.toml
+vim config.toml
+
+# 运行（挂载配置文件）
 docker run -p 8765:8765 \
-  -e HOW2USE_CLIENTS__GROK2API__APP_KEY=xxx \
-  -e HOW2USE_CLIENTS__NEW_API__ACCESS_TOKEN=xxx \
-  -e HOW2USE_CLIENTS__NEW_API__USER_ID=1 \
   -v $(pwd)/config.toml:/app/config.toml \
   how2use
 ```
