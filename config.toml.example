@@ -33,6 +33,12 @@ app_key = "admin-gpt2api"     # 等同 gpt2api 的 server.admin_key
 timeout = 10.0
 max_connections = 10
 
+[clients.sub2api]
+base_url = "http://127.0.0.1:8080"
+admin_key = ""                 # sub2api 后台的 Admin API Key (x-api-key 头)
+timeout = 10.0
+max_connections = 10
+
 # ============ Provider: grok2api ============
 [providers.grok2api]
 enabled = true
@@ -61,3 +67,9 @@ client = "gpt2api"
 cooling_counts_as_used_concurrency = true
 include_accounts = true
 mask_tail_len = 8
+
+# ============ Provider: sub2api ============
+[providers.sub2api]
+enabled = true
+client = "sub2api"
+include_accounts = false       # sub2api 账号过多，不逐个展示

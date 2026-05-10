@@ -34,6 +34,7 @@ def build_providers(
     from . import grok2api as _grok  # noqa: F401
     from . import nim as _nim  # noqa: F401
     from . import gpt2api as _gpt2api  # noqa: F401
+    from . import sub2api as _sub2api  # noqa: F401
 
     out: list[UpstreamProvider] = []
     for name, cfg in provider_configs:

@@ -54,10 +54,18 @@ class Gpt2ApiClientConfig(BaseModel):
     max_connections: int = 10
 
 
+class Sub2ApiClientConfig(BaseModel):
+    base_url: str = "http://127.0.0.1:8080"
+    admin_key: str = ""
+    timeout: float = 10.0
+    max_connections: int = 10
+
+
 class ClientsConfig(BaseModel):
     new_api: NewApiClientConfig = Field(default_factory=NewApiClientConfig)
     grok2api: Grok2ApiClientConfig = Field(default_factory=Grok2ApiClientConfig)
     gpt2api: Gpt2ApiClientConfig = Field(default_factory=Gpt2ApiClientConfig)
+    sub2api: Sub2ApiClientConfig = Field(default_factory=Sub2ApiClientConfig)
 
 
 class GrokProviderConfig(BaseModel):
@@ -97,10 +105,17 @@ class Gpt2ApiProviderConfig(BaseModel):
     mask_tail_len: int = 8
 
 
+class Sub2ApiProviderConfig(BaseModel):
+    enabled: bool = True
+    client: str = "sub2api"
+    include_accounts: bool = False
+
+
 class ProvidersConfig(BaseModel):
     grok2api: GrokProviderConfig = Field(default_factory=GrokProviderConfig)
     nim: NimProviderConfig = Field(default_factory=NimProviderConfig)
     gpt2api: Gpt2ApiProviderConfig = Field(default_factory=Gpt2ApiProviderConfig)
+    sub2api: Sub2ApiProviderConfig = Field(default_factory=Sub2ApiProviderConfig)
 
     def iter_enabled(self) -> list[tuple[str, BaseModel]]:
         out: list[tuple[str, BaseModel]] = []
@@ -108,6 +123,7 @@ class ProvidersConfig(BaseModel):
             ("grok2api", self.grok2api),
             ("nim", self.nim),
             ("gpt2api", self.gpt2api),
+            ("sub2api", self.sub2api),
         ):
             if getattr(cfg, "enabled", False):
                 out.append((name, cfg))
@@ -171,10 +187,12 @@ __all__ = [
     "NewApiClientConfig",
     "Grok2ApiClientConfig",
     "Gpt2ApiClientConfig",
+    "Sub2ApiClientConfig",
     "GrokProviderConfig",
     "NimPoolConfig",
     "NimProviderConfig",
     "Gpt2ApiProviderConfig",
+    "Sub2ApiProviderConfig",
     "ProvidersConfig",
     "get_config",
     "reset_config_cache",
