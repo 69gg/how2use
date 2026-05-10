@@ -47,9 +47,17 @@ class Grok2ApiClientConfig(BaseModel):
     max_connections: int = 10
 
 
+class Gpt2ApiClientConfig(BaseModel):
+    base_url: str = "http://127.0.0.1:18000"
+    app_key: str = ""
+    timeout: float = 10.0
+    max_connections: int = 10
+
+
 class ClientsConfig(BaseModel):
     new_api: NewApiClientConfig = Field(default_factory=NewApiClientConfig)
     grok2api: Grok2ApiClientConfig = Field(default_factory=Grok2ApiClientConfig)
+    gpt2api: Gpt2ApiClientConfig = Field(default_factory=Gpt2ApiClientConfig)
 
 
 class GrokProviderConfig(BaseModel):
@@ -81,15 +89,25 @@ class NimProviderConfig(BaseModel):
     pools: list[NimPoolConfig] = Field(default_factory=list)
 
 
+class Gpt2ApiProviderConfig(BaseModel):
+    enabled: bool = True
+    client: str = "gpt2api"
+    cooling_counts_as_used_concurrency: bool = True
+    include_accounts: bool = True
+    mask_tail_len: int = 8
+
+
 class ProvidersConfig(BaseModel):
     grok2api: GrokProviderConfig = Field(default_factory=GrokProviderConfig)
     nim: NimProviderConfig = Field(default_factory=NimProviderConfig)
+    gpt2api: Gpt2ApiProviderConfig = Field(default_factory=Gpt2ApiProviderConfig)
 
     def iter_enabled(self) -> list[tuple[str, BaseModel]]:
         out: list[tuple[str, BaseModel]] = []
         for name, cfg in (
             ("grok2api", self.grok2api),
             ("nim", self.nim),
+            ("gpt2api", self.gpt2api),
         ):
             if getattr(cfg, "enabled", False):
                 out.append((name, cfg))
@@ -152,9 +170,11 @@ __all__ = [
     "ClientsConfig",
     "NewApiClientConfig",
     "Grok2ApiClientConfig",
+    "Gpt2ApiClientConfig",
     "GrokProviderConfig",
     "NimPoolConfig",
     "NimProviderConfig",
+    "Gpt2ApiProviderConfig",
     "ProvidersConfig",
     "get_config",
     "reset_config_cache",

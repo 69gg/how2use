@@ -27,6 +27,12 @@ app_key = "grok2api"          # 等同 grok2api 的 SERVER_APP_KEY
 timeout = 10.0
 max_connections = 10
 
+[clients.gpt2api]
+base_url = "http://127.0.0.1:18000"
+app_key = "admin-gpt2api"     # 等同 gpt2api 的 server.admin_key
+timeout = 10.0
+max_connections = 10
+
 # ============ Provider: grok2api ============
 [providers.grok2api]
 enabled = true
@@ -47,3 +53,11 @@ pool_size = 10
 rpm_per_key = 40
 new_api_channel_ids = [42]
 probe_interval_seconds = 2
+
+# ============ Provider: gpt2api ============
+[providers.gpt2api]
+enabled = true
+client = "gpt2api"
+cooling_counts_as_used_concurrency = true
+include_accounts = true
+mask_tail_len = 8

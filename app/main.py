@@ -12,6 +12,7 @@ from app.api.routes import router as api_router
 from app.cache import CapacityCache
 from app.clients.grok2api_client import Grok2ApiClient
 from app.clients.new_api_client import NewApiClient
+from app.clients.gpt2api_client import Gpt2ApiClient
 from app.core.config import get_config
 from app.core.logger import logger, setup_logger
 from app.providers import build_providers
@@ -28,15 +29,20 @@ async def lifespan(app: FastAPI):
     enabled = cfg.providers.iter_enabled()
     needs_grok = any(getattr(c, "client", None) == "grok2api" for _, c in enabled)
     needs_new_api = any(getattr(c, "client", None) == "new_api" for _, c in enabled)
+    needs_gpt2api = any(getattr(c, "client", None) == "gpt2api" for _, c in enabled)
 
     grok_client: Grok2ApiClient | None = None
     new_api_client: NewApiClient | None = None
+    gpt2api_client: Gpt2ApiClient | None = None
     if needs_grok:
         grok_client = Grok2ApiClient(cfg.clients.grok2api)
         clients["grok2api"] = grok_client
     if needs_new_api:
         new_api_client = NewApiClient(cfg.clients.new_api)
         clients["new_api"] = new_api_client
+    if needs_gpt2api:
+        gpt2api_client = Gpt2ApiClient(cfg.clients.gpt2api)
+        clients["gpt2api"] = gpt2api_client
 
     providers = build_providers(enabled, clients)
     app.state.providers = {p.name: p for p in providers}
@@ -70,6 +76,8 @@ async def lifespan(app: FastAPI):
             await grok_client.aclose()
         if new_api_client is not None:
             await new_api_client.aclose()
+        if gpt2api_client is not None:
+            await gpt2api_client.aclose()
         logger.info("how2use stopped")
 
 
