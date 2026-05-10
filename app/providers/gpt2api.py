@@ -5,31 +5,16 @@
 from __future__ import annotations
 
 import time
-from typing import Iterable
 
 from app.clients.gpt2api_client import Gpt2ApiClient
 from app.core.config import Gpt2ApiProviderConfig
 from app.core.logger import logger
 from app.providers import register
-from app.providers.base import AccountSlot, ProviderCapacity, ProviderError
-
-STATUS_ACTIVE = "active"
-STATUS_COOLING = "cooling"
-STATUS_EXPIRED = "expired"
-STATUS_DISABLED = "disabled"
+from app.providers.base import ProviderCapacity, ProviderError
 
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
-
-
-def _mask(token: str, tail: int) -> str:
-    if not token:
-        return ""
-    tail = max(1, tail)
-    if len(token) <= tail:
-        return token
-    return token[-tail:]
 
 
 @register("gpt2api")
@@ -45,7 +30,7 @@ class Gpt2ApiProvider:
 
     async def fetch_capacity(self) -> list[ProviderCapacity]:
         try:
-            pools = await self.client.get_tokens()
+            pool_counts = await self.client.get_token_counts()
         except ProviderError as e:
             logger.warning("Gpt2ApiProvider fetch failed: {}", e)
             return [
@@ -59,39 +44,19 @@ class Gpt2ApiProvider:
             ]
 
         out: list[ProviderCapacity] = []
-        for pool_name, tokens in pools.items():
-            out.append(self._build_pool_capacity(pool_name, tokens or []))
+        for pool_name, counts in pool_counts.items():
+            out.append(self._build_pool_capacity_from_counts(pool_name, counts))
         out.sort(key=lambda c: c.pool_name or "")
         return out
 
-    def _build_pool_capacity(
-        self, pool_name: str, tokens: Iterable[dict]
+    def _build_pool_capacity_from_counts(
+        self, pool_name: str, counts: dict
     ) -> ProviderCapacity:
-        token_list = list(tokens)
-        active = cooling = expired = disabled = 0
-        accounts: list[AccountSlot] = []
-
-        for t in token_list:
-            status = str(t.get("status") or "").lower()
-            if status == STATUS_ACTIVE:
-                active += 1
-            elif status == STATUS_COOLING:
-                cooling += 1
-            elif status == STATUS_EXPIRED:
-                expired += 1
-            elif status == STATUS_DISABLED:
-                disabled += 1
-
-            if self.cfg.include_accounts:
-                accounts.append(
-                    AccountSlot(
-                        id=_mask(str(t.get("token") or ""), self.cfg.mask_tail_len),
-                        status=status or "unknown",
-                        use_count=int(t.get("use_count") or 0),
-                        fail_count=int(t.get("fail_count") or 0),
-                        last_used_at=t.get("last_used_at"),
-                    )
-                )
+        total = int(counts.get("total") or 0)
+        active = int(counts.get("active") or 0)
+        cooling = int(counts.get("cooling") or 0)
+        expired = int(counts.get("expired") or 0)
+        disabled = int(counts.get("disabled") or 0)
 
         concurrency_total = active
         concurrency_used = cooling if self.cfg.cooling_counts_as_used_concurrency else 0
@@ -100,7 +65,7 @@ class Gpt2ApiProvider:
         return ProviderCapacity(
             provider=self.name,
             pool_name=pool_name,
-            accounts_total=len(token_list),
+            accounts_total=total,
             accounts_active=active,
             accounts_cooling=cooling,
             accounts_expired=expired,
@@ -112,7 +77,7 @@ class Gpt2ApiProvider:
             rpm_used=None,
             rpm_remaining=None,
             quota_remaining=None,
-            accounts=accounts,
+            accounts=[],
             fetched_at=_now_ms(),
             healthy=True,
         )

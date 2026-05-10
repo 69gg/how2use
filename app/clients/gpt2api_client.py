@@ -67,5 +67,39 @@ class Gpt2ApiClient:
             )
         return tokens
 
+    async def get_token_counts(self) -> dict[str, dict]:
+        """返回 ``{pool_name: {total, active, cooling, expired, disabled}}``
+
+        轻量端点，不传输完整 token 数据。
+        对应 gpt2api ``GET /v1/admin/tokens/counts``
+        """
+        try:
+            resp = await self._client.get("/v1/admin/tokens/counts")
+        except httpx.TimeoutException as e:
+            raise UpstreamError(f"gpt2api /v1/admin/tokens/counts timeout: {e}") from e
+        except httpx.HTTPError as e:
+            raise UpstreamError(f"gpt2api /v1/admin/tokens/counts network error: {e}") from e
+
+        if resp.status_code in (401, 403):
+            raise AuthError(
+                f"gpt2api auth failed (status={resp.status_code}): check app_key"
+            )
+        if resp.status_code >= 400:
+            raise UpstreamError(
+                f"gpt2api /v1/admin/tokens/counts HTTP {resp.status_code}: {resp.text[:200]}"
+            )
+
+        try:
+            payload = resp.json()
+        except ValueError as e:
+            raise UpstreamError(f"gpt2api response not JSON: {e}") from e
+
+        pools = payload.get("pools") or {}
+        if not isinstance(pools, dict):
+            raise UpstreamError(
+                f"gpt2api response 'pools' not a dict: {type(pools).__name__}"
+            )
+        return pools
+
 
 __all__ = ["Gpt2ApiClient"]
