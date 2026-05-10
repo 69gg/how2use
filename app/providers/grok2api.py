@@ -77,7 +77,7 @@ class GrokProvider:
             rpm_limit=None,
             rpm_used=None,
             rpm_remaining=None,
-            quota_remaining=0.0,
+            quota_remaining=float(int(counts.get("quota_total") or 0)),
             accounts=[],
             fetched_at=_now_ms(),
             healthy=True,
