@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional, Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ================ 统一异常 ================
@@ -71,6 +71,33 @@ class ProviderCapacity(BaseModel):
     fetched_at: int = 0  # ms
     healthy: bool = True
     error: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _check_exhausted(self) -> "ProviderCapacity":
+        if not self.healthy:
+            return self
+
+        exhausted = False
+        if self.accounts_total > 0 and self.accounts_active == 0:
+            exhausted = True
+        if self.quota_remaining is not None and self.quota_remaining <= 0:
+            exhausted = True
+        if self.concurrency_total > 0 and self.concurrency_remaining <= 0:
+            exhausted = True
+        if (
+            self.rpm_limit is not None
+            and self.rpm_limit > 0
+            and self.rpm_remaining is not None
+            and self.rpm_remaining <= 0
+        ):
+            exhausted = True
+
+        if exhausted:
+            self.healthy = False
+            if self.error is None:
+                self.error = "capacity exhausted"
+
+        return self
 
 
 # ================ Protocol ================
